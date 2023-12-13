@@ -184,6 +184,10 @@ CUBE rotatePlane[8];
 //나왔다가 사라지기
 CUBE showonoffPlane[5][5];
 bool show[5][5];
+//오징어게임
+CUBE squidPlane[2][10];
+bool squidOX[2][10];
+bool squidDraw[2][10];
 
 struct SPHERE :OBJECT
 {
@@ -356,6 +360,12 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 			showonoffPlane[i][j].ReadObj("cube.obj");
 		}
 	}
+	//오징어게임
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 10; ++j) {
+			squidPlane[i][j].ReadObj("cube.obj");
+		}
+	}
 	//--- 세이더 읽어와서 세이더 프로그램 만들기
 	make_shaderProgram(); //--- 세이더 프로그램 만들기
 	InitBuffer();
@@ -380,7 +390,28 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 			showonoffPlane[i][j].worldmatrix.scale = glm::vec3(2.5, 0.25, 2.5);
 		}
 	}
-
+	//오징어게임
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 10; ++j) {
+			if (i % 2 == 0) {
+				squidPlane[i][j].worldmatrix.position.x = -2.5;
+			}
+			else {
+				squidPlane[i][j].worldmatrix.position.x = 2.5;
+			}
+			squidPlane[i][j].worldmatrix.position.z = 30 + j * 2.5;
+			squidPlane[i][j].worldmatrix.scale = glm::vec3(2.5, 0.25, 2.5);
+			squidDraw[i][j] = true;
+		}
+	}
+	for (int i = 0; i < 5;++i) {
+		int b = rand() % 10;
+		squidOX[0][b] = true;
+		b = rand() % 10;
+		squidOX[1][b] = true;
+		
+	}
+	
 	glutTimerFunc(10, TimerFunction, 1);
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
@@ -480,6 +511,13 @@ GLvoid drawScene()
 				showonoffPlane[i][j].draw(shaderProgramID);
 		}
 	}
+	//오징어 게임
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 10; ++j) {
+			if(squidDraw[i][j])
+				squidPlane[i][j].draw(shaderProgramID);
+		}
+	}
 	model = glm::mat4(1.0f);
 	sphere.draw(shaderProgramID);
 	minicube.draw(shaderProgramID);
@@ -510,6 +548,12 @@ void InitBuffer()
 	for (int i = 0; i < 5; ++i) {
 		for (int j = 0; j < 5; ++j) {
 			showonoffPlane[i][j].Init();
+		}
+	}
+	//오징어게임
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 10; ++j) {
+			squidPlane[i][j].Init();
 		}
 	}
 	sphere.Init();
@@ -764,6 +808,17 @@ bool XZBoundingBox2(CUBE obstalce[5][5], int i, int j, float r) {
 	}
 	else return false;
 }
+//오징어게임
+bool XZBoundingBox3(CUBE obstalce[2][10], int i, int j, float r) {
+	if (obstalce[i][j].worldmatrix.position.x - r < sphere.worldmatrix.position.x &&
+		obstalce[i][j].worldmatrix.position.x + r > sphere.worldmatrix.position.x &&
+		obstalce[i][j].worldmatrix.position.z + r > sphere.worldmatrix.position.z &&
+		obstalce[i][j].worldmatrix.position.z - r < sphere.worldmatrix.position.z) {
+		return true;
+	}
+	else return false;
+}
+int Counting = 0;
 GLvoid TimerFunction(int value)
 {
 	switch (value)
@@ -805,20 +860,30 @@ GLvoid TimerFunction(int value)
 		}
 		
 		//나왔다가 사라지기 z 값이 5 ~ 10
-		int x = rand() % 5;
-		int y = rand() % 5;
-		if (!show[x][y]) show[x][y] = true;
-		else show[x][y] = false;
+		if (Counting < 5)Counting += 1;
+		if (Counting == 5) {
+			int x = rand() % 5;
+			int y = rand() % 5;
+			if (!show[x][y]) show[x][y] = true;
+			else show[x][y] = false;
+			Counting = 0;
+		}
 		for (int i = 0; i < 5; ++i) {
 			for (int j = 0; j < 5; ++j) {
 				if (!show[i][j] && XZBoundingBox2(showonoffPlane, i, j, 1.25)) {
 					//밑으로 떨어지기
-					cout << "떨어져용" << endl;
+					cout << i << " " << j << endl;
 				}
 			}
 		}
-		
-
+		//오징어 게임
+		for (int i = 0; i < 2; ++i) {
+			for (int j = 0; j < 10; ++j) {
+				if (XZBoundingBox3(squidPlane, i, j, 0.25)) {				
+					if (!squidOX[i][j]) squidDraw[i][j] = false;
+				}
+			}
+		}
 		break;
 	}
 	glutPostRedisplay();
