@@ -245,6 +245,11 @@ struct SPHERE :OBJECT
 		glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(glm::vec3), normaldata, GL_STATIC_DRAW);
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(2);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+		glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(glm::vec3), texturedata, GL_STATIC_DRAW);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(3);
 	}
 
 	void draw(int shaderID)
@@ -252,6 +257,8 @@ struct SPHERE :OBJECT
 		unsigned int modelLocation = glGetUniformLocation(shaderID, "model");
 		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(GetTransform() * GetmodelTransform()));
 		glBindVertexArray(vao);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
 		glDrawArrays(GL_TRIANGLES, 0, vertex_count);
 	}
 
@@ -361,6 +368,8 @@ bool show[5][5];
 CUBE squidPlane[2][10];
 bool squidOX[2][10];
 bool squidDraw[2][10];
+//펀치
+CUBE punch[3];
 
 GLfloat lineShape[10][2][3] = {};	//--- 선분 위치 값
 
@@ -433,6 +442,9 @@ bool downKeyPressed = false;
 bool leftKeyPressed = false;
 bool rightKeyPressed = false;
 
+//카메라
+bool viewpoint = false;	//false : 3인칭, true : 1인칭
+
 void make_shaderProgram();
 void make_vertexShaders();
 void make_fragmentShaders();
@@ -489,6 +501,11 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 			squidPlane[i][j].ReadObj("cube.obj");
 		}
 	}
+	//펀치
+	for (int i = 0; i < 3; ++i) {
+		punch[i].ReadObj("cube.obj");
+	}
+
 	//--- 세이더 읽어와서 세이더 프로그램 만들기
 	make_shaderProgram(); //--- 세이더 프로그램 만들기
 	InitBuffer();
@@ -514,7 +531,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 			showonoffPlane[i][j].worldmatrix.scale = glm::vec3(2.5, 0.25, 2.5);
 		}
 	}
-	//오징어게임
+	//오징어게임 위치
 	for (int i = 0; i < 2; ++i) {
 		for (int j = 0; j < 10; ++j) {
 			if (i % 2 == 0) {
@@ -535,6 +552,13 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 		squidOX[1][b] = true;
 		
 	}
+	//펀치 위치
+	punch[0].worldmatrix.position.x = 10;
+	punch[0].worldmatrix.position.z = 55;
+	punch[1].worldmatrix.position.x = -10;
+	punch[1].worldmatrix.position.z = 65;
+	punch[2].worldmatrix.position.x = 10;
+	punch[2].worldmatrix.position.z = 75;
 	
 	glutTimerFunc(10, TimerFunction, 1);
 	glutDisplayFunc(drawScene);
@@ -622,6 +646,11 @@ GLvoid drawScene()
 	}
 
 	//s r t p 코드 작성시에는 반대 방향으로.
+	if (!viewpoint)
+	{
+
+		sphere.draw(shaderProgramID);
+	}
 	//돌아가는 판때기
 	model = glm::mat4(1.0f);
 	for (int i = 0; i < 8; ++i) {
@@ -635,9 +664,13 @@ GLvoid drawScene()
 				showonoffPlane[i][j].draw(shaderProgramID, 2);
 		}
 	}
-	
+	//펀치
+	for (int i = 0; i < 3; ++i) {
+		punch[i].draw(shaderProgramID, 4);
+	}
+
 	model = glm::mat4(1.0f);
-	sphere.draw(shaderProgramID);
+	//sphere.draw(shaderProgramID);
 	minicube.draw(shaderProgramID, 1);
 	skybox.draw(shaderProgramID, 1);
 
@@ -669,7 +702,7 @@ void InitBuffer()
 
 	cube.Init();
 	minicube.Init();
-	minicube.parent = &cube;
+	//minicube.parent = &cube;
 	//돌아가는 판때기
 	for (int i = 0; i < 8; ++i) {
 		rotatePlane[i].Init();
@@ -686,12 +719,20 @@ void InitBuffer()
 			squidPlane[i][j].Init();
 		}
 	}
+	//펀치
+	for (int i = 0; i < 3; ++i) {
+		punch[i].Init();
+		punch[i].worldmatrix.position.y = 2.5;
+		punch[i].worldmatrix.scale = glm::vec3(5, 5, 5);
+	}
 	sphere.Init();
 	sphere.modelmatrix.scale = glm::vec3(0.5, 0.5, 0.5);
 
 	skybox.Init();
 	skybox.worldmatrix.position.y = 10;
 	skybox.worldmatrix.scale = glm::vec3(50.0, 50.0, 200.0);
+
+	cube.worldmatrix.position.z = 10;
 
 	minicube.worldmatrix.position.z = -3;
 	minicube.modelmatrix.scale = glm::vec3(0.5, 0.5, 0.5);
@@ -778,6 +819,15 @@ char* filetobuf(const char* file)
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
+	case 'j':
+		if (JSelection == 0)
+		{
+			JSelection = 1;
+		}
+		break;
+	case 'v':
+		viewpoint = !viewpoint;
+		break;
 	case 'q':
 		glutLeaveMainLoop();
 		break;
@@ -826,18 +876,22 @@ void moveSphere()
 	if (upKeyPressed)
 	{
 		sphere.worldmatrix.position.z += speed;
+		sphere.modelmatrix.rotation.x += speed * 50;
 	}
 	if (downKeyPressed)
 	{
 		sphere.worldmatrix.position.z -= speed;
+		sphere.modelmatrix.rotation.x -= speed * 50;
 	}
 	if (leftKeyPressed)
 	{
 		sphere.worldmatrix.position.x += speed;
+		sphere.modelmatrix.rotation.z -= speed * 50;
 	}
 	if (rightKeyPressed)
 	{
 		sphere.worldmatrix.position.x -= speed;
+		sphere.modelmatrix.rotation.z += speed * 50;
 	}
 }
 
@@ -876,19 +930,29 @@ void moveSphere()
 
 GLvoid Motion(int x, int y)
 {
-	ox = x;
-	oy = y;
-	left_button = true;
+	//ox = x;
+	//oy = y;
+	//left_button = true;
 
-	float x_diff = x - ox;
-	float y_diff = y - oy;
-	cameraDirection += x_diff / 2;
+	//float x_diff = x - ox;
+	//float y_diff = y - oy;
+	//cameraDirection += x_diff / 2;
 
-	// 카메라 높이와 거리를 구와의 상대적인 위치로 설정
-	cameraPos.x = sphere.worldmatrix.position.x + cameraDistance * sin(glm::radians(cameraAngle));
-	cameraPos.y = sphere.worldmatrix.position.y + cameraHeight;
-	cameraPos.z = sphere.worldmatrix.position.z + cameraDistance * cos(glm::radians(cameraAngle));
+	//// 카메라 높이와 거리를 구와의 상대적인 위치로 설정
+	//cameraPos.x = sphere.worldmatrix.position.x + cameraDistance * sin(glm::radians(cameraAngle));
+	//cameraPos.y = sphere.worldmatrix.position.y + cameraHeight;
+	//cameraPos.z = sphere.worldmatrix.position.z + cameraDistance * cos(glm::radians(cameraAngle));
+	if (left_button)
+	{
+		y_angle = x - ox;
+		x_angle = y - oy;
+		x_angle += pre_x_angle;
+		y_angle += pre_y_angle;
 
+		y_angle /= 2;
+		x_angle /= 2;
+	}
+	glutPostRedisplay();
 	glutPostRedisplay();
 }
 
@@ -952,28 +1016,48 @@ GLvoid TimerFunction(int value)
 	switch (value)
 	{
 	case 1:
-
+		sphere.worldmatrix.scale = glm::vec3(1, 1, 1);
 		moveSphere();
-
-		//sphere.worldmatrix.position.y += jumpVelocity; // 구에 점프 속도 적용
-		//sphere.worldmatrix.scale = glm::vec3(1.0f, 1.0f + jumpVelocity, 1.0f);
-
+		if (JSelection == 1)
+		{
+			sphere.worldmatrix.position.y += jumpVelocity; // 구에 점프 속도 적용
+			//sphere.worldmatrix.scale = glm::vec3(1.0f, 1.0f + jumpVelocity, 1.0f);
+			sphere.worldmatrix.scale = glm::vec3(1.0f, 1.0f + jumpVelocity + jumpInitialVelocity / 2, 1.0f);
+			// 중력 적용
+			jumpVelocity -= gravity;
+		}
 		// 카메라 위치 조정
 		cameraPos.x = sphere.worldmatrix.position.x + cameraDistance * sin(glm::radians(cameraAngle));
-		cameraPos.y = sphere.worldmatrix.position.y + cameraHeight;
-		cameraPos.z = sphere.worldmatrix.position.z + cameraDistance * cos(glm::radians(cameraAngle));
-
-		//// 카메라가 구를 바라보도록 방향 설정
-		//cameraDirection = glm::normalize(sphere.worldmatrix.position - cameraPos);
-
-		// 중력 적용
-		jumpVelocity -= gravity;
+		cameraPos.y = sphere.worldmatrix.position.y + cameraHeight + viewpoint * -3.1;
+		cameraPos.z = sphere.worldmatrix.position.z + cameraDistance * cos(glm::radians(cameraAngle)) + viewpoint * 17;
 
 		// 땅에 닿았을 때의 처리
 		if (sphere.worldmatrix.position.y <= initialHeight) {
 			sphere.worldmatrix.position.y = initialHeight;
 			jumpVelocity = jumpInitialVelocity; // 다시 초기 점프 속도로 설정
+			JSelection = 0;
 		}
+		//moveSphere();
+
+		//sphere.worldmatrix.position.y += jumpVelocity; // 구에 점프 속도 적용
+		//sphere.worldmatrix.scale = glm::vec3(1.0f, 1.0f + jumpVelocity, 1.0f);
+
+		//// 카메라 위치 조정
+		//cameraPos.x = sphere.worldmatrix.position.x + cameraDistance * sin(glm::radians(cameraAngle));
+		//cameraPos.y = sphere.worldmatrix.position.y + cameraHeight;
+		//cameraPos.z = sphere.worldmatrix.position.z + cameraDistance * cos(glm::radians(cameraAngle));
+
+		////// 카메라가 구를 바라보도록 방향 설정
+		////cameraDirection = glm::normalize(sphere.worldmatrix.position - cameraPos);
+
+		//// 중력 적용
+		//jumpVelocity -= gravity;
+
+		//// 땅에 닿았을 때의 처리
+		//if (sphere.worldmatrix.position.y <= initialHeight) {
+		//	sphere.worldmatrix.position.y = initialHeight;
+		//	jumpVelocity = jumpInitialVelocity; // 다시 초기 점프 속도로 설정
+		//}
 
 		//돌아가는 판때기 z 값이 0 ~ 5
 		float angle[8] = { 2.5f,-2.5f,2.5f,-2.5f,2.5f,-2.5f,-2.5f,2.5f };
@@ -1012,6 +1096,17 @@ GLvoid TimerFunction(int value)
 				}
 			}
 		}
+		//펀치
+		punch[0].worldmatrix.position.x -= 0.025;
+		punch[1].worldmatrix.position.x += 0.025;
+		punch[2].worldmatrix.position.x -= 0.025;
+		if (punch[0].worldmatrix.position.x <= 5)
+			punch[0].worldmatrix.position.x = 10;
+		if (punch[1].worldmatrix.position.x >= -5)
+			punch[1].worldmatrix.position.x = -10;
+		if (punch[2].worldmatrix.position.x <= 5)
+			punch[2].worldmatrix.position.x = 10;
+		
 		break;
 	}
 	glutPostRedisplay();
@@ -1062,14 +1157,14 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data4); //---텍스처 이미지 정의
 
-	unsigned char* data5 = stbi_load("E.bmp", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data5 = stbi_load("punch.png", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[4]
 	glBindTexture(GL_TEXTURE_2D, textures[4]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data5); //---텍스처 이미지 정의
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, widthimage1, heightimage1, 0, GL_RGBA, GL_UNSIGNED_BYTE, data5); //---텍스처 이미지 정의
 
 	unsigned char* data6 = stbi_load("F.bmp", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[5]
