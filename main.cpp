@@ -33,6 +33,7 @@ FMOD::System* ssystem;
 FMOD::Sound* background, * jump, * glassbroken, * tramjump, * hit, * gameclear;
 FMOD::Channel* bgm_channel = 0;
 FMOD::Channel* end_channel = 0;
+FMOD::Channel* big_channel = 0;
 FMOD::Channel* effect_channel = 0;
 FMOD_RESULT result;
 void* extradriverdata = 0;
@@ -557,6 +558,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 	startTitle.ReadObj("cube.obj");
 	endTitle.ReadObj("cube.obj");
 
+
 	//--- 세이더 읽어와서 세이더 프로그램 만들기
 	make_shaderProgram(); //--- 세이더 프로그램 만들기
 	InitBuffer();
@@ -688,6 +690,8 @@ GLvoid drawScene()
 	}
 	if (endpoint)
 	{
+		effect_channel->stop();
+		bgm_channel->stop();
 		glViewport(0, 0, windowWidth, windowHeight);
 		pTransform3 = glm::mat4(1.0f);
 		pTransform3 = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
@@ -723,10 +727,10 @@ void InitBuffer()
 	ssystem->createSound("sound/glassbroken_bgm.wav", FMOD_LOOP_OFF, 0, &glassbroken);
 	ssystem->createSound("sound/trampoline_bgm.wav", FMOD_LOOP_OFF, 0, &tramjump);
 	ssystem->createSound("sound/gameclear_bgm.wav", FMOD_LOOP_OFF, 0, &gameclear);
-	bgm_channel->setVolume(0.000001);
-	effect_channel->setVolume(1);
-	end_channel->setVolume(1);
-	ssystem->playSound(background, 0, false, &bgm_channel);
+	bgm_channel->setVolume(0.0);
+	effect_channel->setVolume(0.0);
+	big_channel->setVolume(0.0);
+	end_channel->setVolume(0.0);
 	cube.Init();
 	minicube.Init();
 	//minicube.parent = &cube;
@@ -992,12 +996,17 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		adminmode = !adminmode;
 		break;
 	case 's':
+		bgm_channel->setVolume(0.1);
+		effect_channel->setVolume(0.5);
+		big_channel->setVolume(1.0);
+		end_channel->setVolume(0.2);
+		ssystem->playSound(background, 0, false, &bgm_channel);
 		start = false;
 		break;
 	case 32:
 		if (JSelection == 0)
 		{
-			ssystem->playSound(jump, 0, false, &effect_channel);
+			ssystem->playSound(jump, 0, false, &bgm_channel);
 			JSelection = 1;
 		}
 		break;
@@ -1057,7 +1066,7 @@ GLvoid SpecialKeysUp(int key, int x, int y) {
 		rightKeyPressed = false;
 		break;
 	case 32:
-		destination = sphere.worldmatrix.position;
+		//destination = sphere.worldmatrix.position;
 		spacePressed = false;
 
 		break;
@@ -1163,6 +1172,7 @@ GLvoid TimerFunction(int value)
 	case 1:
 		if (!start && !endpoint)
 		{
+
 			sphere.worldmatrix.scale = glm::vec3(1, 1, 1);
 			if (!falling || adminmode)
 			{
@@ -1278,6 +1288,9 @@ GLvoid TimerFunction(int value)
 					falling = false;
 					if (i == 6)
 					{
+						bgm_channel->stop();
+						effect_channel->stop();
+						ssystem->playSound(gameclear, 0, false, &end_channel);
 						endpoint = true;
 					}
 					break;
@@ -1331,7 +1344,6 @@ GLvoid TimerFunction(int value)
 					}
 					else if (glassrandom[i] == 1)
 					{
-						effect_channel->setVolume(1);
 						ssystem->playSound(glassbroken, 0, false, &effect_channel);
 						glassrandom[i] = -1;
 					}
@@ -1355,7 +1367,7 @@ GLvoid TimerFunction(int value)
 					&& (sphere.worldmatrix.position.z < (punch[i].worldmatrix.position.z + punch[i].height)))
 					)
 				{
-					ssystem->playSound(hit, 0, false, &effect_channel);
+					ssystem->playSound(hit, 0, false, &big_channel);
 					if (punchDirection[i] == 0)
 					{
 						sphere.worldmatrix.position.x += punchMoveCnt[i] * 2;
@@ -1377,7 +1389,7 @@ GLvoid TimerFunction(int value)
 					&& (sphere.worldmatrix.position.y > (trampoline[i].worldmatrix.position.y - trampoline[i].depth))
 					&& (sphere.worldmatrix.position.y < (trampoline[i].worldmatrix.position.y + trampoline[i].depth)))
 				{
-					ssystem->playSound(tramjump, 0, false, &effect_channel);
+					ssystem->playSound(tramjump, 0, false, &big_channel);
 
 					falling = false;
 					jumpVelocity = 0.6;
@@ -1422,9 +1434,9 @@ GLvoid TimerFunction(int value)
 			else if (sphere.worldmatrix.position.z >= 600 && sphere.worldmatrix.position.z < 700)
 			{
 				checknum = 6;
-				bgm_channel->stop();
+				/*bgm_channel->stop();
 				effect_channel->stop();
-				ssystem->playSound(gameclear, 0, false, &end_channel);
+				ssystem->playSound(gameclear, 0, false, &end_channel);*/
 			}
 
 
