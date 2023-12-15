@@ -1012,6 +1012,7 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 }
 
 bool spacePressed = true;
+glm::vec3 destination;
 
 GLvoid SpecialKeys(int key, int x, int y)
 {
@@ -1034,23 +1035,31 @@ GLvoid SpecialKeys(int key, int x, int y)
 	}
 	glutPostRedisplay(); // 화면 갱신
 }
-
 GLvoid SpecialKeysUp(int key, int x, int y) {
 	switch (key) {
 	case GLUT_KEY_UP:
 		upKeyPressed = false;
+		destination = sphere.worldmatrix.position;
+
 		break;
 	case GLUT_KEY_DOWN:
 		downKeyPressed = false;
+		destination = sphere.worldmatrix.position;
+
 		break;
 	case GLUT_KEY_LEFT:
 		leftKeyPressed = false;
+		destination = sphere.worldmatrix.position;
+
 		break;
 	case GLUT_KEY_RIGHT:
+		destination = sphere.worldmatrix.position;
 		rightKeyPressed = false;
 		break;
 	case 32:
+		destination = sphere.worldmatrix.position;
 		spacePressed = false;
+
 		break;
 	}
 }
@@ -1114,7 +1123,6 @@ GLvoid Motion(int x, int y)
 	glutPostRedisplay();
 }
 
-
 GLvoid mouseWheel(int button, int dir, int x, int y)
 {
 	if (dir > 0)
@@ -1147,7 +1155,6 @@ void collision()
 
 }
 float angles[5]{};
-glm::vec3 destination;
 
 GLvoid TimerFunction(int value)
 {
@@ -1284,17 +1291,12 @@ GLvoid TimerFunction(int value)
 					&& (sphere.worldmatrix.position.z < (rotatePlane[i].worldmatrix.position.z + rotatePlane[i].height)))
 					)
 				{
-
 					if (!upKeyPressed && !downKeyPressed && !rightKeyPressed && !leftKeyPressed) {
-						sphere.worldmatrix.position.x = rotatePlane[i].worldmatrix.position.x + 4 * cos(-angles[i] * 2 * 3.141592 / 180.0);
-						sphere.worldmatrix.position.z = rotatePlane[i].worldmatrix.position.z + 4 * sin(-angles[i] * 2 * 3.141592 / 180.0);
+						double r = sqrt(pow(rotatePlane[i].worldmatrix.position.x - destination.x, 2) + pow(rotatePlane[i].worldmatrix.position.z - destination.z, 2));
+						sphere.worldmatrix.position.x = rotatePlane[i].worldmatrix.position.x + r * cos(-angles[i] * 4 * 3.141592 / 180.0);
+						sphere.worldmatrix.position.z = rotatePlane[i].worldmatrix.position.z + r * sin(-angles[i] * 4 * 3.141592 / 180.0);
 					}
-					/*else {
-						if (upKeyPressed) {
-							if (i % 2 == 0) sphere.worldmatrix.position.x -= speed /2;
-							else sphere.worldmatrix.position.x += speed / 2;
-						}
-					}*/
+
 					falling = false;
 					break;
 				}
@@ -1463,7 +1465,7 @@ void InitTexture()
 	stbi_set_flip_vertically_on_load(true);
 	glGenTextures(15, textures);
 
-	unsigned char* data1 = stbi_load("crysta5.png", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data1 = stbi_load("texture/crysta5.png", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[0]
 	glBindTexture(GL_TEXTURE_2D, textures[0]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1472,7 +1474,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data1); //---텍스처 이미지 정의
 
-	unsigned char* data2 = stbi_load("space2.png", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data2 = stbi_load("texture/space2.png", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[1] 우주 배경
 	glBindTexture(GL_TEXTURE_2D, textures[1]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1481,7 +1483,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data2); //---텍스처 이미지 정의
 
-	unsigned char* data3 = stbi_load("crystal1.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data3 = stbi_load("texture/crystal1.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[2]
 	glBindTexture(GL_TEXTURE_2D, textures[2]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1490,7 +1492,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data3); //---텍스처 이미지 정의
 
-	unsigned char* data4 = stbi_load("crystal5.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data4 = stbi_load("texture/crystal5.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[3]
 	glBindTexture(GL_TEXTURE_2D, textures[3]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1499,7 +1501,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data4); //---텍스처 이미지 정의
 
-	unsigned char* data5 = stbi_load("crystal3.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data5 = stbi_load("texture/crystal3.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[4]
 	glBindTexture(GL_TEXTURE_2D, textures[4]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1508,7 +1510,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data5); //---텍스처 이미지 정의
 
-	unsigned char* data6 = stbi_load("crystal4.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data6 = stbi_load("texture/crystal4.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[5]
 	glBindTexture(GL_TEXTURE_2D, textures[5]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1517,7 +1519,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data6); //---텍스처 이미지 정의
 
-	unsigned char* data7 = stbi_load("1212.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data7 = stbi_load("texture/1212.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[6]
 	glBindTexture(GL_TEXTURE_2D, textures[6]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1526,7 +1528,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data7); //---텍스처 이미지 정의
 
-	unsigned char* data8 = stbi_load("crystal6.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data8 = stbi_load("texture/crystal6.jpg", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[6]
 	glBindTexture(GL_TEXTURE_2D, textures[7]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1535,7 +1537,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data8); //---텍스처 이미지 정의
 
-	unsigned char* data9 = stbi_load("startview.bmp", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data9 = stbi_load("texture/startview.bmp", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[6]
 	glBindTexture(GL_TEXTURE_2D, textures[8]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1544,7 +1546,7 @@ void InitTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, widthimage1, heightimage1, 0, GL_RGB, GL_UNSIGNED_BYTE, data9); //---텍스처 이미지 정의
 
-	unsigned char* data10 = stbi_load("endview.bmp", &widthimage1, &heightimage1, &numberOfChannel1, 0);
+	unsigned char* data10 = stbi_load("texture/endview.bmp", &widthimage1, &heightimage1, &numberOfChannel1, 0);
 	//--- texture[6]
 	glBindTexture(GL_TEXTURE_2D, textures[9]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
